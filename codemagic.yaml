@@ -1,29 +1,32 @@
 workflows:
   android_release:
-    name: Android Release
-    instance_type: mac_mini_m1
+    name: Android Release (Notifications)
     max_build_duration: 60
+    instance_type: mac_mini_m1
     environment:
       flutter: 3.24.0
+
     scripts:
+      # 1) Proje iskeleti yoksa üret (android/ klasörü dahil)
       - name: Ensure project structure
         script: |
           if [ ! -d "android" ]; then
             flutter create .
           fi
 
-      - name: Add Android notification permissions
+      # 2) AndroidManifest.xml'i yaz (bildirim izni + boot receiver)
+      #    NOT: android:name satırı YOK (v1 embedding hatasını önlemek için)
+      - name: Write AndroidManifest.xml
         script: |
           mkdir -p android/app/src/main
           cat > android/app/src/main/AndroidManifest.xml << 'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-              package="com.example.ramazan_planner">
+              package="com.example.maestroveteriner_maker">
 
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
               <application
                   android:label="Ramazan Planner"
-                  android:name="${applicationName}"
                   android:icon="@mipmap/ic_launcher">
 
                   <receiver
@@ -52,14 +55,20 @@ workflows:
           </manifest>
           EOF
 
+      # 3) minSdkVersion >= 21 (bildirim paketi için şart)
       - name: Ensure minSdkVersion >= 21
         script: |
           sed -i.bak 's/minSdkVersion [0-9][0-9]*/minSdkVersion 21/' android/app/build.gradle || true
 
+      # 4) Temizlik ve bağımlılıklar
+      - name: Flutter clean
+        script: flutter clean
       - name: Get dependencies
         script: flutter pub get
 
+      # 5) APK üret
       - name: Build release APK
         script: flutter build apk --release
+
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
