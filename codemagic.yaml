@@ -28,10 +28,8 @@ workflows:
                   android:label="Ramazan Planner"
                   android:icon="@mipmap/ic_launcher">
 
-                  <!-- v2 embedding bildirimi -->
                   <meta-data android:name="flutterEmbedding" android:value="2"/>
 
-                  <!-- Boot sonrası planlanan bildirimleri geri kur -->
                   <receiver
                       android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
                       android:exported="false">
@@ -58,20 +56,34 @@ workflows:
           </manifest>
           EOF
 
-      # 3) minSdkVersion >= 21 (bildirim paketi için gerekli)
+      # 3) Kotlin'i 1.9.24'e yükselt (kotlin_version ve plugin classpath)
+      - name: Bump Kotlin to 1.9.24
+        script: |
+          # Top-level build.gradle içinde ext.kotlin_version varsa 1.9.24 yap
+          if [ -f android/build.gradle ]; then
+            sed -i.bak "s/ext.kotlin_version *= *'[^']*'/ext.kotlin_version = '1.9.24'/" android/build.gradle || true
+            # kotlin-gradle-plugin satırını da 1.9.24 yap
+            sed -i.bak "s/kotlin-gradle-plugin:[0-9.]\+/kotlin-gradle-plugin:1.9.24/" android/build.gradle || true
+            # AGP'yi makul bir sürüme çek (8.4.1) - eski ise günceller
+            sed -i.bak "s/com.android.tools.build:gradle:[0-9.]\+/com.android.tools.build:gradle:8.4.1/" android/build.gradle || true
+          fi
+          # Bazı şablonlarda sürüm gradle.properties'ten gelir, oraya da yaz
+          echo "kotlin.version=1.9.24" >> android/gradle.properties
+
+      # 4) minSdkVersion >= 21 (bildirim paketi için şart)
       - name: Ensure minSdkVersion >= 21
         script: |
           if [ -f android/app/build.gradle ]; then
             sed -i.bak 's/minSdkVersion [0-9][0-9]*/minSdkVersion 21/' android/app/build.gradle || true
           fi
 
-      # 4) Temizlik ve bağımlılıklar
+      # 5) Temizlik ve bağımlılıklar
       - name: Flutter clean
         script: flutter clean
       - name: Get dependencies
         script: flutter pub get
 
-      # 5) (Emniyet) MainActivity v2 embedding'e işaret ediyor mu?
+      # 6) Emniyet: MainActivity v2 embedding'e işaret ediyor mu?
       - name: Ensure MainActivity uses v2 embedding
         script: |
           FILE_KT=$(grep -Rsl "class MainActivity" android/app/src/main/kotlin || true)
@@ -79,7 +91,7 @@ workflows:
             sed -i.bak 's/io.flutter.app.FlutterActivity/io.flutter.embedding.android.FlutterActivity/g' "$FILE_KT" || true
           fi
 
-      # 6) APK üret
+      # 7) APK üret
       - name: Build release APK
         script: flutter build apk --release
 
