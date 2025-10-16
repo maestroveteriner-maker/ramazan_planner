@@ -14,8 +14,7 @@ workflows:
             flutter create .
           fi
 
-      # 2) AndroidManifest.xml'i yaz (bildirim izni + boot receiver)
-      #    NOT: android:name satırı YOK (v1 embedding hatasını önlemek için)
+      # 2) AndroidManifest.xml'i yaz (izin + boot receiver + embedding v2 meta-data)
       - name: Write AndroidManifest.xml
         script: |
           mkdir -p android/app/src/main
@@ -29,46 +28,4 @@ workflows:
                   android:label="Ramazan Planner"
                   android:icon="@mipmap/ic_launcher">
 
-                  <receiver
-                      android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
-                      android:exported="false">
-                    <intent-filter>
-                      <action android:name="android.intent.action.BOOT_COMPLETED"/>
-                      <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
-                    </intent-filter>
-                  </receiver>
-
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:launchMode="singleTop"
-                      android:theme="@style/LaunchTheme"
-                      android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-                      android:hardwareAccelerated="true"
-                      android:windowSoftInputMode="adjustResize">
-                      <intent-filter>
-                        <action android:name="android.intent.action.MAIN"/>
-                        <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
-
-      # 3) minSdkVersion >= 21 (bildirim paketi için şart)
-      - name: Ensure minSdkVersion >= 21
-        script: |
-          sed -i.bak 's/minSdkVersion [0-9][0-9]*/minSdkVersion 21/' android/app/build.gradle || true
-
-      # 4) Temizlik ve bağımlılıklar
-      - name: Flutter clean
-        script: flutter clean
-      - name: Get dependencies
-        script: flutter pub get
-
-      # 5) APK üret
-      - name: Build release APK
-        script: flutter build apk --release
-
-    artifacts:
-      - build/app/outputs/flutter-apk/app-release.apk
+                  <!-- ZORUNLU: v2 embedding bildirimi -
