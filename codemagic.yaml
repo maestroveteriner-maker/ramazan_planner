@@ -1,18 +1,65 @@
 workflows:
-  debug_android:
-    name: Debug Android APK
-    instance_type: mac_mini_m2
+  android_release:
+    name: Android Release
+    instance_type: mac_mini_m1
+    max_build_duration: 60
     environment:
-      flutter: stable
-      java: 17
+      flutter: 3.24.0
     scripts:
-      - name: Ensure Android folder exists
+      - name: Ensure project structure
         script: |
           if [ ! -d "android" ]; then
-            flutter create . --platforms=android
+            flutter create .
           fi
-          flutter pub get
-      - name: Build debug APK
-        script: flutter build apk --debug
+
+      - name: Add Android notification permissions
+        script: |
+          mkdir -p android/app/src/main
+          cat > android/app/src/main/AndroidManifest.xml << 'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.example.ramazan_planner">
+
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+              <application
+                  android:label="Ramazan Planner"
+                  android:name="${applicationName}"
+                  android:icon="@mipmap/ic_launcher">
+
+                  <receiver
+                      android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+                      android:exported="false">
+                    <intent-filter>
+                      <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                      <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                    </intent-filter>
+                  </receiver>
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:launchMode="singleTop"
+                      android:theme="@style/LaunchTheme"
+                      android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+                      android:hardwareAccelerated="true"
+                      android:windowSoftInputMode="adjustResize">
+                      <intent-filter>
+                        <action android:name="android.intent.action.MAIN"/>
+                        <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+      - name: Ensure minSdkVersion >= 21
+        script: |
+          sed -i.bak 's/minSdkVersion [0-9][0-9]*/minSdkVersion 21/' android/app/build.gradle || true
+
+      - name: Get dependencies
+        script: flutter pub get
+
+      - name: Build release APK
+        script: flutter build apk --release
     artifacts:
-      - build/app/outputs/flutter-apk/app-debug.apk
+      - build/app/outputs/flutter-apk/app-release.apk
