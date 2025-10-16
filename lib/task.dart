@@ -1,3 +1,27 @@
+import 'package:hive/hive.dart';
+part 'task.g.dart';
+
+@HiveType(typeId: 1)
+class Task {
+  @HiveField(0)
+  String id;
+  @HiveField(1)
+  String title;
+  @HiveField(2)
+  bool done;
+  @HiveField(3)
+  DateTime? remindAt;
+  @HiveField(4)
+  int? notificationId;
+
+  Task({
+    required this.id,
+    required this.title,
+    this.done = false,
+    this.remindAt,
+    this.notificationId,
+  });
+}
 import 'dart:convert';
 
 class Task {
