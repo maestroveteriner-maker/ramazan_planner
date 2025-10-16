@@ -1,5 +1,4 @@
 import 'package:hive/hive.dart';
-part 'task.g.dart';
 
 @HiveType(typeId: 1)
 class Task {
@@ -22,52 +21,41 @@ class Task {
     this.notificationId,
   });
 }
-import 'dart:convert';
 
-class Task {
-  final String id;
-  String title;
-  String? notes;
-  DateTime? due;
-  bool done;
-  int priority; // 0=low,1=med,2=high
-  String? category;
+/// Elle yazılmış adapter (build_runner gerektirmez)
+class TaskAdapter extends TypeAdapter<Task> {
+  @override
+  final int typeId = 1;
 
-  Task({
-    required this.id,
-    required this.title,
-    this.notes,
-    this.due,
-    this.done = false,
-    this.priority = 0,
-    this.category,
-  });
+  @override
+  Task read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
 
-  factory Task.fromJson(Map<String, dynamic> json) => Task(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        notes: json['notes'] as String?,
-        due: json['due'] != null ? DateTime.parse(json['due'] as String) : null,
-        done: json['done'] as bool? ?? false,
-        priority: json['priority'] as int? ?? 0,
-        category: json['category'] as String?,
-      );
+    return Task(
+      id: fields[0] as String,
+      title: fields[1] as String,
+      done: fields[2] as bool,
+      remindAt: fields[3] as DateTime?,
+      notificationId: fields[4] as int?,
+    );
+  }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'notes': notes,
-        'due': due?.toIso8601String(),
-        'done': done,
-        'priority': priority,
-        'category': category,
-      };
-
-  static String encodeList(List<Task> items) =>
-      jsonEncode(items.map((e) => e.toJson()).toList());
-
-  static List<Task> decodeList(String source) {
-    final data = jsonDecode(source) as List<dynamic>;
-    return data.map((e) => Task.fromJson(e as Map<String, dynamic>)).toList();
+  @override
+  void write(BinaryWriter writer, Task obj) {
+    writer
+      ..writeByte(5)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.title)
+      ..writeByte(2)
+      ..write(obj.done)
+      ..writeByte(3)
+      ..write(obj.remindAt)
+      ..writeByte(4)
+      ..write(obj.notificationId);
   }
 }
